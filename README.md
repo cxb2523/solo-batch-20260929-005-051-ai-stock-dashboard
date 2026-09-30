@@ -47,6 +47,37 @@ A comprehensive, AI-powered stock market dashboard that combines advanced techni
 Python 3.8 or higher
 ```
 
+## 🌐 Flask pipeline dashboard (`app.py`)
+
+The corrected fetch -> indicators -> ML pipeline is served by Flask:
+
+```bash
+python app.py
+# open http://127.0.0.1:5000/dashboard
+# JSON:  http://127.0.0.1:5000/stats?format=json
+```
+
+Query parameters: `tickers=AAPL,MSFT` (comma separated), `interval=1d`,
+`period=2y`, `adjust=qfq|hfq|raw`. The port can be overridden with the
+`PORT` environment variable.
+
+Pipeline guarantees:
+
+- UTC-normalized, sorted, de-duplicated DatetimeIndex with flat lower-case
+  OHLCV columns (yfinance `MultiIndex` is flattened).
+- On-disk cache keyed by `ticker|interval|adjust|<UTC last-bar date>` so an
+  incremental bar changes the key; the TTL is a back-stop only.
+- Wilder-smoothed RSI and SMA-seeded MACD (26 + 9) keep their warm-up
+  window as leading NaN rows; nothing is back/forward filled.
+- ML features are shifted by one bar (decision at the close of `t-1`) and
+  aligned with the next-bar return label via a single drop mask; zero
+  divisions become NaN and all-NaN feature columns are dropped and reported.
+- One ticker failing never crashes the page; cache hits, dropped rows,
+  warm-up rows, indicator valid-start dates and failed tickers are rendered
+  on `/dashboard` and exposed as JSON on `/stats`.
+
+Run the pipeline tests with `python -m pytest -q`.
+
 ### Installation
 
 1. **Clone the repository**
